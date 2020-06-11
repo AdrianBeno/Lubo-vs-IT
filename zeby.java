@@ -1,18 +1,28 @@
+import com.itextpdf.text.*;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Image;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.tool.xml.html.head.Link;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xwpf.usermodel.*;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtils;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Vector;
+import java.awt.geom.Rectangle2D;
+import java.io.*;
+import java.util.*;
 
 public class zeby {    // netusim ako sa ma robit grafika
+
     public static void main(String[] args){
 
         SwingUtilities.invokeLater(new Runnable() {
@@ -26,6 +36,7 @@ public class zeby {    // netusim ako sa ma robit grafika
             }
         });
     }
+
 }
 
 class MainFrame extends JFrame {
@@ -104,12 +115,13 @@ class MainFrame extends JFrame {
         Center.add(label2);
     }
 
+
     private void tryCreate(File file, File directory){   // velice inefficient, just wanted to see if i can do something at all
         Row rowCurrent;
         Cell cellMaster;
-        teacher teacherCurrent;
+        Teacher teacherCurrent;
         HashMap<String, Integer> teachersIndex = new HashMap<>();
-        Vector<teacher> teachersVector = new Vector<>(5,5);
+        Vector<Teacher> teachersVector = new Vector<>(5,5);
         int index=0;
 
         try {
@@ -137,7 +149,7 @@ class MainFrame extends JFrame {
                         }
                         else if (!rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue().contains("not")){
                             teachersIndex.put(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue(), index);
-                            teacherCurrent = new teacher(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
+                            teacherCurrent = new Teacher(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
                             teachersVector.add(teacherCurrent);
                             index+=1;
                         }
@@ -155,7 +167,8 @@ class MainFrame extends JFrame {
                         }
                         else if(sheet.getRow(1).getCell(cellMaster.getColumnIndex())!=null && sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue()>0
                                 && rowCurrent.getCell(cellMaster.getColumnIndex())!=null && teacherCurrent!=null){
-                            teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue());
+                            //teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue());
+                            teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), 5);
                         }
                         if (teacherCurrent!=null){
                             teachersVector.set(teachersIndex.get(teacherCurrent.getNameSubject()), teacherCurrent);
@@ -164,8 +177,18 @@ class MainFrame extends JFrame {
                 }
             }
 
+            PdfGenerator pdfGenerator = new PdfGenerator();
+
+            for (int i = 0; i < teachersVector.size(); i++) {
+
+                pdfGenerator.createPdf(teachersVector.get(i),"");
+
+            }
+
             //potialto to spracuvava excel, odtialto to vyraba wordy a pdfka
-            
+
+            /*
+
             String dirOutput = directory.getPath()+"\\";
             String dirDocxTeacherEval, dirDocxSubjectEval, dirDocxNumberEval;
             String dirPdfTeacherEval, dirPdfSubjectEval, dirPdfNumberEval;
@@ -272,58 +295,239 @@ class MainFrame extends JFrame {
                 docSubjectEval.save(dirPdfSubjectEval);
                 docNumberEval.save(dirPdfNumberEval);
             }
+
+
+
+             */
+
+
             label3.setText("finished");
         }catch (Exception e){
             e.printStackTrace();
         }
     }
+
 }
 
-class teacher{
+class Teacher {
+
     private String nameSubject;
     private HashMap<String, int[]> hashMap;
     private Vector<String> subjectEval, teacherEval;
 
-    teacher(String nameSubject){
+    Teacher(String nameSubject) {
         this.nameSubject = nameSubject;
         hashMap = new HashMap<>();
-        subjectEval = new Vector<>(5,5);
-        teacherEval = new Vector<>(5,5);
+        subjectEval = new Vector<>(5, 5);
+        teacherEval = new Vector<>(5, 5);
     }
 
-    public void addScore(String question, double score, double maxScore){
-        if (hashMap.containsKey(question)){
+    public void addScore(String question, double score, double maxScore) {
+        if (hashMap.containsKey(question)) {
             int[] frequency = hashMap.get(question);
-            frequency[(int)(score-1)]+=1;
+            frequency[(int) (score - 1)] += 1;
             hashMap.replace(question, frequency);
-        }
-        else{
-            int[] frequency = new int[(int)maxScore];
-            for (int i=0; i<maxScore; i++){
-                frequency[i]=0;
+        } else {
+            int[] frequency = new int[(int) maxScore];
+            for (int i = 0; i < maxScore; i++) {
+                frequency[i] = 0;
             }
-            frequency[(int)(score-1)]+=1;
+            frequency[(int) (score - 1)] += 1;
             hashMap.put(question, frequency);
         }
     }
 
-    public void addSubjectEval(String evaluation){
+    public void addSubjectEval(String evaluation) {
         subjectEval.add(evaluation);
     }
 
-    public String[] getSubjectEval(){
+    public String[] getSubjectEval() {
         return subjectEval.toArray(new String[0]);
     }
 
-    public void addTeacherEval(String evaluation){
+    public void addTeacherEval(String evaluation) {
         teacherEval.add(evaluation);
     }
 
-    public String[] getTeacherEval(){
+    public String[] getTeacherEval() {
         return teacherEval.toArray(new String[0]);
     }
 
-    public String getNameSubject(){
+    public String getNameSubject() {
         return nameSubject;
     }
+
+    public HashMap getHashMap() {
+        return hashMap;
+    }
+}
+
+class PdfGenerator {
+
+    PdfGenerator() {}
+
+    public void createPdf(Teacher teacher, String path) throws IOException, DocumentException {
+
+        //Vezmem reku hodnotenia ucitela
+        HashMap ratings = teacher.getHashMap();
+        //Vytvorim si tuto vec aby som mohol iterovat cez hash mapu
+        Iterator it = ratings.entrySet().iterator();
+
+        //Na nazvy suborov
+        int filenumber = 1;
+
+        path = "/home/michal/IdeaProjects/LuboAutomatizuje/";
+        String filename = teacher.getNameSubject();
+
+        //Veci na vytvorenie pdfka
+        Document document = new Document();
+        FileOutputStream fileOutputStream = new FileOutputStream(path + filename + ".pdf");
+        PdfWriter.getInstance(document, fileOutputStream);
+        document.open();
+        //Toto som sem musel dat lebo si to myslelo ze dokument je prazdny
+        document.add(new Chunk(""));
+
+        while (it.hasNext()) {
+
+            //Vezmem value teda array frekvencii hodnoteni z objektu na ktoroj sme teraz
+            Map.Entry pair = (Map.Entry) it.next();
+            int[] frequencies = (int[]) pair.getValue();
+            String question = (String) pair.getKey();
+
+            //Vytvorim dataset na graf
+            DefaultCategoryDataset dataSet = new DefaultCategoryDataset();
+
+            //Vytvorim sablonu tabulky
+            PdfPTable table = new PdfPTable(6);
+            table.addCell("Hodnota/ value");
+
+            for (int i = 1; i <= frequencies.length; i++) {
+                table.addCell(Integer.toString(i));
+            }
+
+            table.addCell("Koľkokrát/ frequency");
+
+            int totalScore = 0;
+            int totalRespondents = 0;
+            float average = 0;
+
+            //Prebehnem pole s frekvenciami a dam ich do datasetu
+            for (int i = 0; i < frequencies.length; i++) {
+
+                dataSet.setValue(frequencies[i], "Frequency", Integer.toString(i + 1));
+                table.addCell(Integer.toString(frequencies[i]));
+
+                totalScore += (i + 1) * frequencies[i];
+                totalRespondents += frequencies[i];
+
+            }
+
+            average = (float) totalScore / (float) totalRespondents;
+            table.addCell("Priemer/ average");
+            table.addCell(Float.toString(average));
+            for (int i = 2; i <= frequencies.length; i++) {
+                table.addCell("");
+            }
+
+            //Toto tu zevraj treba podla StackOverflow
+            it.remove();
+
+            //Spravim chart objekt s datasetu
+            JFreeChart chart = ChartFactory.createBarChart(
+                    "Vaše hodnotenie/ your evaluation", "Hodnota/ value", "Koľkokrát/ frequency",
+                    dataSet, PlotOrientation.VERTICAL, false, true, false);
+
+            //A nakreslim z toho pekny obrazok
+            String chartFileName = "chart" + Integer.toString(filenumber) + ".png";
+            File barChart = new File(chartFileName);
+            ChartUtils.saveChartAsPNG(barChart, chart, 640, 480);
+
+            //Dam otazku a za nou graf to pdfka
+            Image chartImage = Image.getInstance(chartFileName);
+            chartImage.scalePercent(75);
+            document.add(new Paragraph(question));
+            document.add(chartImage);
+            document.add(table);
+            document.newPage();
+
+            //Zvysim cislo grafu o 1
+            filenumber++;
+
+        }
+
+        //Koniec prace s pdfkom
+        document.close();
+        fileOutputStream.close();
+
+    }
+
+    public HashMap calculateAverages(Vector teachers) {
+
+        HashMap<String, LinkedList<Float>> averages = new HashMap<>();
+
+        for (Object teacher : teachers) {
+
+            HashMap ratings = ((Teacher) teacher).getHashMap();
+            Iterator it = ratings.entrySet().iterator();
+
+            while (it.hasNext()) {
+
+                Map.Entry pair = (Map.Entry) it.next();
+                int[] frequencies = (int[]) pair.getValue();
+                String question = (String) pair.getKey();
+
+                int totalScore = 0;
+                int totalRespondents = 0;
+                float currentAverage = 0;
+
+                for (int i = 0; i < frequencies.length; i++) {
+
+                    totalScore += (i + 1) * frequencies[i];
+                    totalRespondents += frequencies[i];
+
+                }
+
+                currentAverage = (float) totalScore / (float) totalRespondents;
+
+                if (averages.containsKey(question)) {
+
+                    LinkedList temp = averages.get(question);
+                    addValue(temp, currentAverage);
+                    averages.put(question, temp);
+
+                } else {
+
+                    LinkedList<Float> temp = new LinkedList<>();
+                    addValue(temp, currentAverage);
+                    averages.put(question, temp);
+
+                }
+
+                it.remove();
+            }
+
+        }
+
+        return averages;
+
+    }
+
+    private static void addValue(LinkedList<Float> llist, float val) {
+
+        if (llist.size() == 0) {
+            llist.add(val);
+        } else if (llist.get(0) > val) {
+            llist.add(0, val);
+        } else if (llist.get(llist.size() - 1) < val) {
+            llist.add(llist.size(), val);
+        } else {
+            int i = 0;
+            while (llist.get(i) < val) {
+                i++;
+            }
+            llist.add(i, val);
+        }
+
+    }
+
 }
