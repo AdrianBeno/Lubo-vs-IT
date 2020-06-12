@@ -1,28 +1,28 @@
+import org.apache.poi.ss.usermodel.*;
+
 import com.itextpdf.text.*;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.tool.xml.html.head.Link;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xwpf.usermodel.*;
+
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.geom.Rectangle2D;
-import java.io.*;
 import java.util.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 public class zeby {    // netusim ako sa ma robit grafika
-
     public static void main(String[] args){
 
         SwingUtilities.invokeLater(new Runnable() {
@@ -36,7 +36,6 @@ public class zeby {    // netusim ako sa ma robit grafika
             }
         });
     }
-
 }
 
 class MainFrame extends JFrame {
@@ -46,18 +45,18 @@ class MainFrame extends JFrame {
     JPanel North, Center, South;
     File file, directory;
 
-    public MainFrame(String title){
+    public MainFrame(String title) {
         super(title);
 
-        North=new JPanel();
-        South=new JPanel();
-        Center=new JPanel();
-        button1=new JButton("browse");
-        button3 =new JButton("create");
-        button2 =new JButton("browse");
-        label1=new JLabel("/filename/");
-        label3 =new JLabel("/status/");
-        label2 =new JLabel("/directory/");
+        North = new JPanel();
+        South = new JPanel();
+        Center = new JPanel();
+        button1 = new JButton("browse");
+        button3 = new JButton("create");
+        button2 = new JButton("browse");
+        label1 = new JLabel("/filename/");
+        label3 = new JLabel("/status/");
+        label2 = new JLabel("/directory/");
 
         this.setLayout(new BorderLayout());
         this.add(North, BorderLayout.NORTH);
@@ -70,10 +69,10 @@ class MainFrame extends JFrame {
                 JFileChooser fileChooser = new JFileChooser();
                 fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
                 int option = fileChooser.showOpenDialog(MainFrame.super.rootPane);
-                if(option == JFileChooser.APPROVE_OPTION){
+                if (option == JFileChooser.APPROVE_OPTION) {
                     file = fileChooser.getSelectedFile();
                     label1.setText(file.getName());
-                }else{
+                } else {
                     label1.setText("/pick file/");
                 }
             }
@@ -85,10 +84,10 @@ class MainFrame extends JFrame {
                 JFileChooser fileChooser = new JFileChooser();
                 fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 int option = fileChooser.showOpenDialog(MainFrame.super.rootPane);
-                if(option == JFileChooser.APPROVE_OPTION){
+                if (option == JFileChooser.APPROVE_OPTION) {
                     directory = fileChooser.getSelectedFile();
                     label2.setText(directory.getPath());
-                }else{
+                } else {
                     label2.setText("/pick directory/");
                 }
             }
@@ -97,10 +96,9 @@ class MainFrame extends JFrame {
         button3.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (file!=null & directory!=null){
-                    tryCreate(file, directory);
-                }
-                else{
+                if (file != null & directory != null) {
+                    createHash(file, directory);
+                } else {
                     label1.setText("/pick file/");
                     label2.setText("/pick directory/");
                 }
@@ -115,250 +113,83 @@ class MainFrame extends JFrame {
         Center.add(label2);
     }
 
-
-    private void tryCreate(File file, File directory){   // velice inefficient, just wanted to see if i can do something at all
+    private void createHash(File file, File directory) {
         Row rowCurrent;
         Cell cellMaster;
-        Teacher teacherCurrent;
-        HashMap<String, Integer> teachersIndex = new HashMap<>();
-        Vector<Teacher> teachersVector = new Vector<>(5,5);
-        int index=0;
+        Teacher teacherCurrent = null;
+        HashMap<String, Teacher> teachers = new HashMap<>();
 
         try {
-            FileInputStream inputStream1 = new FileInputStream(file);
-            Workbook workbook1 = WorkbookFactory.create(inputStream1);
-            Sheet sheet = workbook1.getSheetAt(0);    // pozor na cislo sheetu
+            FileInputStream inputStream = new FileInputStream(file);
+            Workbook workbook = WorkbookFactory.create(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);    // pozor na cislo sheetu
 
             Iterator<Row> iteratorRow = sheet.iterator();
 
-            iteratorRow.next();
+            iteratorRow.next();      //
             iteratorRow.next();      // aby sme zacali na riadku index 2
-            while (iteratorRow.hasNext()){
+            while (iteratorRow.hasNext()) {
                 rowCurrent = iteratorRow.next();
 
-                teacherCurrent = null;
-
-                Iterator<Cell> iteratorCell = sheet.getRow(0).cellIterator();
+                Iterator<Cell> iteratorCell = sheet.getRow(0).cellIterator();   // tam su otazky
                 iteratorCell.next();    // aby sme zacali na cell index 1
-                while (iteratorCell.hasNext()){
+                while (iteratorCell.hasNext()) {
                     cellMaster = iteratorCell.next();
 
-                    if (cellMaster.getStringCellValue().contains("Pick your")){
-                        if (teachersIndex.containsKey(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue())){
-                            teacherCurrent = teachersVector.get(teachersIndex.get(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue()));
-                        }
-                        else if (!rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue().contains("not")){
-                            teachersIndex.put(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue(), index);
+                    if (rowCurrent.getCell(cellMaster.getColumnIndex()) != null && cellMaster.getStringCellValue().contains("Pick your")) {
+                        if (teachers.containsKey(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue())) {
+                            teacherCurrent = teachers.get(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
+                        } else if (!rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue().contains(" not ")) {
                             teacherCurrent = new Teacher(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
-                            teachersVector.add(teacherCurrent);
-                            index+=1;
+                            teachers.put(teacherCurrent.getNameSubject(), teacherCurrent);
+                        } else {
+                            teacherCurrent = null;
                         }
-                    }
-                    else{
-                        if (sheet.getRow(1).getCell(cellMaster.getColumnIndex())!=null && sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue()==0){
-                            if (rowCurrent.getCell(cellMaster.getColumnIndex())!=null && teacherCurrent!=null &&
-                                    cellMaster.getStringCellValue().contains("Characterize")){   // characterize je na subject
+                    } else if (teacherCurrent != null && sheet.getRow(1).getCell(cellMaster.getColumnIndex()) != null && // aby sme vedeli ze ci numericka otazka a jej maxScore
+                            rowCurrent.getCell(cellMaster.getColumnIndex()) != null) {
+                        if (sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue() == 0) {
+                            if (cellMaster.getStringCellValue().contains("Characterize")) {   // characterize je na subject
                                 teacherCurrent.addSubjectEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
-                            }
-                            else if(rowCurrent.getCell(cellMaster.getColumnIndex())!=null && teacherCurrent!=null &&
-                                    cellMaster.getStringCellValue().contains("What are")){      // what are je na teacher
+                            } else if (cellMaster.getStringCellValue().contains("What are")) {      // what are je na Teacher
                                 teacherCurrent.addTeacherEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
                             }
-                        }
-                        else if(sheet.getRow(1).getCell(cellMaster.getColumnIndex())!=null && sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue()>0
-                                && rowCurrent.getCell(cellMaster.getColumnIndex())!=null && teacherCurrent!=null){
-                            //teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue());
+                        } else if (sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue() > 0) {
                             teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), 5);
                         }
-                        if (teacherCurrent!=null){
-                            teachersVector.set(teachersIndex.get(teacherCurrent.getNameSubject()), teacherCurrent);
-                        }
+                        teachers.replace(teacherCurrent.getNameSubject(), teacherCurrent);
                     }
                 }
             }
+
+            Vector<Teacher> teachersVector = new Vector<>(5, 5);
+            Iterator hmIterator = teachers.entrySet().iterator();
+            while (hmIterator.hasNext()) {
+                Map.Entry mapElement = (Map.Entry) hmIterator.next();
+                teachersVector.add((Teacher) mapElement.getValue());
+            }
+
+            /*
+            TODO: Print message "Done reading Excel file."
+             */
 
             PdfGenerator pdfGenerator = new PdfGenerator();
 
             for (int i = 0; i < teachersVector.size(); i++) {
 
-                pdfGenerator.createPdf(teachersVector.get(i),"");
+                pdfGenerator.createPdf(teachersVector.get(i), directory);
+
+                /*
+                TODO: Print message "ratings_[subject_name].pdf generated"
+                TODO: Print message "subjecteval_[subject_name].pdf generated" after I write the function that generates
+                TODO: subject evaluation pdfs
+                TODO: Print message "teachereval_[subject_name].pdf generated" after I write the function that generates
+                TODO: teacher evaluation pdfs
+                */
 
             }
-
-            //potialto to spracuvava excel, odtialto to vyraba wordy a pdfka
-
-            /*
-
-            String dirOutput = directory.getPath()+"\\";
-            String dirDocxTeacherEval, dirDocxSubjectEval, dirDocxNumberEval;
-            String dirPdfTeacherEval, dirPdfSubjectEval, dirPdfNumberEval;
-            XWPFDocument docxTeacherEval, docxSubjectEval, docxNumberEval;
-            FileOutputStream fosTeacherEval, fosSubjectEval, fosNumberEval;
-            for (int i=0; i<teachersVector.size(); i++){
-                dirDocxTeacherEval = dirOutput+teachersVector.get(i).getNameSubject()+" teacherEvaluation.docx";
-                dirDocxSubjectEval = dirOutput+teachersVector.get(i).getNameSubject()+" subjectEvaluation.docx";
-                dirDocxNumberEval = dirOutput+teachersVector.get(i).getNameSubject()+" numberEvaluation.docx";
-                dirPdfTeacherEval = dirOutput+teachersVector.get(i).getNameSubject()+" teacherEvaluation.pdf";
-                dirPdfSubjectEval = dirOutput+teachersVector.get(i).getNameSubject()+" subjectEvaluation.pdf";
-                dirPdfNumberEval = dirOutput+teachersVector.get(i).getNameSubject()+" numberEvaluation.pdf";
-                docxTeacherEval = new XWPFDocument();
-                docxSubjectEval = new XWPFDocument();
-                docxNumberEval = new XWPFDocument();
-                fosTeacherEval = new FileOutputStream(new File(dirDocxTeacherEval));
-                fosSubjectEval = new FileOutputStream(new File(dirDocxSubjectEval));
-                fosNumberEval = new FileOutputStream(new File(dirDocxNumberEval));
-
-                XWPFParagraph paraOneTeacherEval = docxTeacherEval.createParagraph();
-
-                XWPFRun runOneTeacherEval = paraOneTeacherEval.createRun();
-                runOneTeacherEval.setText("Prečo je/nie je učiteľ pre mňa vzorom? Čo sú jeho silné stránky a na čom by mohol popracovať?");
-                runOneTeacherEval.setBold(true);
-                runOneTeacherEval.addBreak();
-                runOneTeacherEval.addBreak();
-
-                XWPFRun runTwoTeacherEval = paraOneTeacherEval.createRun();
-                runTwoTeacherEval.setText("What are the reasons that the teacher is/is not positive role model for me? What are the teacher’s " +
-                        "strengths and what could he/she improve?");
-                runTwoTeacherEval.setBold(true);
-                runTwoTeacherEval.addBreak();
-
-                XWPFTable tableTeacherEval = docxTeacherEval.createTable();
-
-                for (int j=0; j<teachersVector.get(i).getTeacherEval().length; j++){
-                    if (j==0){
-                        XWPFTableRow tableRow = tableTeacherEval.getRow(0);
-                        tableRow.getCell(0).setText(teachersVector.get(i).getTeacherEval()[j]);
-                    }
-                    else{
-                        XWPFTableRow tableRow = tableTeacherEval.createRow();
-                        tableRow.getCell(0).setText(teachersVector.get(i).getTeacherEval()[j]);
-                    }
-                }
-
-                XWPFParagraph paraOneSubjectEval = docxSubjectEval.createParagraph();
-
-                XWPFRun runOneSubjectEval = paraOneSubjectEval.createRun();
-                runOneSubjectEval.setText("Popíš typickú hodinu a čo sa ti na hodinách páči/nepáči? Ako by sa dali hodiny zlepšiť?");
-                runOneSubjectEval.setBold(true);
-                runOneSubjectEval.addBreak();
-                runOneSubjectEval.addBreak();
-
-                XWPFRun runTwoSubjectEval = paraOneSubjectEval.createRun();
-                runTwoSubjectEval.setText("Characterize typical lessons and what you like/dislike about them? What would you suggest to " +
-                        "improve the lessons?");
-                runTwoSubjectEval.setBold(true);
-                runTwoSubjectEval.addBreak();
-
-                XWPFTable tableSubjectEval = docxSubjectEval.createTable();
-
-                for (int j=0; j<teachersVector.get(i).getSubjectEval().length; j++){
-                    if (j==0){
-                        XWPFTableRow tableRow = tableSubjectEval.getRow(0);
-                        tableRow.getCell(0).setText(teachersVector.get(i).getSubjectEval()[j]);
-                    }
-                    else{
-                        XWPFTableRow tableRow = tableSubjectEval.createRow();
-                        tableRow.getCell(0).setText(teachersVector.get(i).getSubjectEval()[j]);
-                    }
-                }
-
-                XWPFParagraph paraOneNumberEval = docxNumberEval.createParagraph();
-
-                XWPFRun runOneNumberEval = paraOneNumberEval.createRun();
-                runOneNumberEval.setText(teachersVector.get(i).getNameSubject());
-                runOneNumberEval.setBold(true);
-                runOneNumberEval.setFontSize(20);
-                runOneNumberEval.addBreak();
-
-                XWPFRun runTwoNumberEval = paraOneNumberEval.createRun();
-                runTwoNumberEval.setText("Hodnotenie hodín a predmetu / lesson and subject evaluation");
-                runTwoNumberEval.setBold(true);
-                runTwoNumberEval.setFontSize(15);
-                runTwoNumberEval.addBreak();
-                runTwoNumberEval.addBreak();
-
-                // Zobrat existujuci subor a len do neho vlozit potrebne udaje
-
-                docxTeacherEval.write(fosTeacherEval);
-                docxSubjectEval.write(fosSubjectEval);
-                docxNumberEval.write(fosNumberEval);
-
-                fosTeacherEval.close();
-                fosSubjectEval.close();
-                fosNumberEval.close();
-
-                com.aspose.words.Document docTeacherEval = new com.aspose.words.Document(dirDocxTeacherEval);
-                com.aspose.words.Document docSubjectEval = new com.aspose.words.Document(dirDocxSubjectEval);
-                com.aspose.words.Document docNumberEval = new com.aspose.words.Document(dirDocxNumberEval);
-
-                docTeacherEval.save(dirPdfTeacherEval);
-                docSubjectEval.save(dirPdfSubjectEval);
-                docNumberEval.save(dirPdfNumberEval);
-            }
-
-
-
-             */
-
-
-            label3.setText("finished");
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-}
-
-class Teacher {
-
-    private String nameSubject;
-    private HashMap<String, int[]> hashMap;
-    private Vector<String> subjectEval, teacherEval;
-
-    Teacher(String nameSubject) {
-        this.nameSubject = nameSubject;
-        hashMap = new HashMap<>();
-        subjectEval = new Vector<>(5, 5);
-        teacherEval = new Vector<>(5, 5);
-    }
-
-    public void addScore(String question, double score, double maxScore) {
-        if (hashMap.containsKey(question)) {
-            int[] frequency = hashMap.get(question);
-            frequency[(int) (score - 1)] += 1;
-            hashMap.replace(question, frequency);
-        } else {
-            int[] frequency = new int[(int) maxScore];
-            for (int i = 0; i < maxScore; i++) {
-                frequency[i] = 0;
-            }
-            frequency[(int) (score - 1)] += 1;
-            hashMap.put(question, frequency);
-        }
-    }
-
-    public void addSubjectEval(String evaluation) {
-        subjectEval.add(evaluation);
-    }
-
-    public String[] getSubjectEval() {
-        return subjectEval.toArray(new String[0]);
-    }
-
-    public void addTeacherEval(String evaluation) {
-        teacherEval.add(evaluation);
-    }
-
-    public String[] getTeacherEval() {
-        return teacherEval.toArray(new String[0]);
-    }
-
-    public String getNameSubject() {
-        return nameSubject;
-    }
-
-    public HashMap getHashMap() {
-        return hashMap;
     }
 }
 
@@ -366,7 +197,7 @@ class PdfGenerator {
 
     PdfGenerator() {}
 
-    public void createPdf(Teacher teacher, String path) throws IOException, DocumentException {
+    public void createPdf(Teacher teacher, File directory) throws IOException, DocumentException {
 
         //Vezmem reku hodnotenia ucitela
         HashMap ratings = teacher.getHashMap();
@@ -376,8 +207,9 @@ class PdfGenerator {
         //Na nazvy suborov
         int filenumber = 1;
 
-        path = "/home/michal/IdeaProjects/LuboAutomatizuje/";
-        String filename = teacher.getNameSubject();
+        //Veci na path kde sa to ulozi a nazov suboru
+        String path = directory.getPath()+"\\";
+        String filename = "ratings_" + teacher.getNameSubject();
 
         //Veci na vytvorenie pdfka
         Document document = new Document();
@@ -389,7 +221,7 @@ class PdfGenerator {
 
         while (it.hasNext()) {
 
-            //Vezmem value teda array frekvencii hodnoteni z objektu na ktoroj sme teraz
+            //Vezmem value teda array frekvencii hodnoteni a nazov predmetu z objektu na ktoroj sme teraz
             Map.Entry pair = (Map.Entry) it.next();
             int[] frequencies = (int[]) pair.getValue();
             String question = (String) pair.getKey();
@@ -401,12 +233,14 @@ class PdfGenerator {
             PdfPTable table = new PdfPTable(6);
             table.addCell("Hodnota/ value");
 
+            //Pridam to tabulky cisla hodnoteni
             for (int i = 1; i <= frequencies.length; i++) {
                 table.addCell(Integer.toString(i));
             }
 
             table.addCell("Koľkokrát/ frequency");
 
+            //Intermediate premenne na priemer
             int totalScore = 0;
             int totalRespondents = 0;
             float average = 0;
@@ -414,7 +248,9 @@ class PdfGenerator {
             //Prebehnem pole s frekvenciami a dam ich do datasetu
             for (int i = 0; i < frequencies.length; i++) {
 
+                //Pridam frekvencie do datasetu na fraf
                 dataSet.setValue(frequencies[i], "Frequency", Integer.toString(i + 1));
+                //Pridam frekvencie do tabulky
                 table.addCell(Integer.toString(frequencies[i]));
 
                 totalScore += (i + 1) * frequencies[i];
@@ -422,9 +258,12 @@ class PdfGenerator {
 
             }
 
+            //Vyratam priemer
             average = (float) totalScore / (float) totalRespondents;
+            //A pridam ho do tabulky
             table.addCell("Priemer/ average");
             table.addCell(Float.toString(average));
+            //Doplnim prazdne bunky do riadku s priemerom lebo inak to nechce spravit tabulku
             for (int i = 2; i <= frequencies.length; i++) {
                 table.addCell("");
             }
@@ -442,7 +281,7 @@ class PdfGenerator {
             File barChart = new File(chartFileName);
             ChartUtils.saveChartAsPNG(barChart, chart, 640, 480);
 
-            //Dam otazku a za nou graf to pdfka
+            //Dam otazku a za nou graf a tabulku to pdfka
             Image chartImage = Image.getInstance(chartFileName);
             chartImage.scalePercent(75);
             document.add(new Paragraph(question));
@@ -530,4 +369,57 @@ class PdfGenerator {
 
     }
 
+}
+
+class Teacher {
+    private String nameSubject;
+    private HashMap<String, int[]> numQuestions;
+    private Vector<String> subjectEval, teacherEval;
+
+    Teacher(String nameSubject){
+        this.nameSubject = nameSubject;
+        numQuestions = new HashMap<>();
+        subjectEval = new Vector<>(5,5);
+        teacherEval = new Vector<>(5,5);
+    }
+
+    void addScore(String question, double score, double maxScore){
+        if (numQuestions.containsKey(question)){
+            int[] frequency = numQuestions.get(question);
+            frequency[(int)(score-1)]+=1;
+            numQuestions.replace(question, frequency);
+        }
+        else{
+            int[] frequency = new int[(int)maxScore];
+            for (int i=0; i<maxScore; i++){
+                frequency[i]=0;
+            }
+            frequency[(int)(score-1)]+=1;
+            numQuestions.put(question, frequency);
+        }
+    }
+
+    void addSubjectEval(String evaluation){
+        subjectEval.add(evaluation);
+    }
+
+    String[] getSubjectEval(){
+        return subjectEval.toArray(new String[0]);
+    }
+
+    void addTeacherEval(String evaluation){
+        teacherEval.add(evaluation);
+    }
+
+    String[] getTeacherEval(){
+        return teacherEval.toArray(new String[0]);
+    }
+
+    String getNameSubject(){
+        return nameSubject;
+    }
+
+    HashMap getHashMap() {
+        return numQuestions;
+    }
 }
