@@ -180,9 +180,16 @@ public class Main extends Application {
 
 class PdfGenerator {
 
-    PdfGenerator() {}
+    private HashMap averages;
 
-    public void createPdf(Teacher teacher, File directory) throws IOException, DocumentException {
+    PdfGenerator(Vector teachersVector) {
+
+        //averages = calculateAverages(teachersVector);
+        //System.out.println("tu som");
+
+    }
+
+    public void generateRatings(Teacher teacher, File directory) throws IOException, DocumentException {
 
         //Vezmem reku hodnotenia ucitela
         HashMap ratings = teacher.getHashMap();
@@ -285,6 +292,86 @@ class PdfGenerator {
 
     }
 
+    public void generateSubEval(Teacher teacher, File directory) throws IOException, DocumentException {
+
+        String[] subjectEval = teacher.getSubjectEval();
+
+        //Veci na path kde sa to ulozi a nazov suboru
+        String path = directory.getPath()+"\\";
+        String filename = "subjecteval_" + teacher.getNameSubject();
+
+        //Veci na vytvorenie pdfka
+        Document document = new Document();
+        FileOutputStream fileOutputStream = new FileOutputStream(path + filename + ".pdf");
+        PdfWriter.getInstance(document, fileOutputStream);
+        document.open();
+        //Toto som sem musel dat lebo si to myslelo ze dokument je prazdny
+        document.add(new Chunk(""));
+
+        //Nadpisy
+        document.add(new Paragraph("Popíš typickú hodinu a čo sa ti na hodinách páči/nepáči? Ako by sa dali hodiny zlepšiť?"));
+        document.add(new Paragraph("Characterize typical lessons and what you like/dislike about them? What would you suggest to improve the lessons?"));
+        document.add(new Chunk(""));
+
+        //Vytvorim sablonu tabulky
+        PdfPTable table = new PdfPTable(1);
+
+        //Do tabulky nahadzem vsetky hodnotenia na dany predmet
+        for (int i = 0; i < subjectEval.length; i++) {
+
+            table.addCell(subjectEval[i]);
+
+        }
+
+        //Pridam tabulku do suboru
+        document.add(table);
+
+        //Koniec prace s pdfkom
+        document.close();
+        fileOutputStream.close();
+
+    }
+
+    public void generateTeachEval(Teacher teacher, File directory) throws IOException, DocumentException {
+
+        String[] teachEval = teacher.getTeacherEval();
+
+        //Veci na path kde sa to ulozi a nazov suboru
+        String path = directory.getPath()+"\\";
+        String filename = "teachereval_" + teacher.getNameSubject();
+
+        //Veci na vytvorenie pdfka
+        Document document = new Document();
+        FileOutputStream fileOutputStream = new FileOutputStream(path + filename + ".pdf");
+        PdfWriter.getInstance(document, fileOutputStream);
+        document.open();
+        //Toto som sem musel dat lebo si to myslelo ze dokument je prazdny
+        document.add(new Chunk(""));
+
+        //Nadpisy
+        document.add(new Paragraph("Prečo je/nie je učiteľ pre mňa vzorom? Čo sú jeho silné stránky a na čom by mohol popracovať?"));
+        document.add(new Paragraph("What are the reasons that the teacher is/is not positive role model for me? What are the teacher’s strengths and what could he/she improve?"));
+        document.add(new Chunk(""));
+
+        //Vytvorim sablonu tabulky
+        PdfPTable table = new PdfPTable(1);
+
+        //Do tabulky nahadzem vsetky hodnotenia na dany predmet
+        for (int i = 0; i < teachEval.length; i++) {
+
+            table.addCell(teachEval[i]);
+
+        }
+
+        //Pridam tabulku do suboru
+        document.add(table);
+
+        //Koniec prace s pdfkom
+        document.close();
+        fileOutputStream.close();
+
+    }
+
     public HashMap calculateAverages(Vector teachers) {
 
         HashMap<String, LinkedList<Float>> averages = new HashMap<>();
@@ -355,6 +442,7 @@ class PdfGenerator {
     }
 
 }
+
 
 class Teacher {
     private String nameSubject;
