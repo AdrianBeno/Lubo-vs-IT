@@ -16,11 +16,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.*;
 import java.util.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 public class zeby {    // netusim ako sa ma robit grafika
     public static void main(String[] args){
@@ -126,8 +123,7 @@ class MainFrame extends JFrame {
 
             Iterator<Row> iteratorRow = sheet.iterator();
 
-            iteratorRow.next();      //
-            iteratorRow.next();      // aby sme zacali na riadku index 2
+            iteratorRow.next();      // aby sme zacali na riadku index 1
             while (iteratorRow.hasNext()) {
                 rowCurrent = iteratorRow.next();
 
@@ -145,15 +141,12 @@ class MainFrame extends JFrame {
                         } else {
                             teacherCurrent = null;
                         }
-                    } else if (teacherCurrent != null && sheet.getRow(1).getCell(cellMaster.getColumnIndex()) != null && // aby sme vedeli ze ci numericka otazka a jej maxScore
-                            rowCurrent.getCell(cellMaster.getColumnIndex()) != null) {
-                        if (sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue() == 0) {
-                            if (cellMaster.getStringCellValue().contains("Characterize")) {   // characterize je na subject
-                                teacherCurrent.addSubjectEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
-                            } else if (cellMaster.getStringCellValue().contains("What are")) {      // what are je na Teacher
-                                teacherCurrent.addTeacherEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
-                            }
-                        } else if (sheet.getRow(1).getCell(cellMaster.getColumnIndex()).getNumericCellValue() > 0) {
+                    } else if (teacherCurrent != null && rowCurrent.getCell(cellMaster.getColumnIndex()) != null) {
+                        if (cellMaster.getStringCellValue().contains("Characterize")) {   // characterize je na subject
+                            teacherCurrent.addSubjectEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
+                        } else if (cellMaster.getStringCellValue().contains("What are")) {      // what are je na Teacher
+                            teacherCurrent.addTeacherEval(rowCurrent.getCell(cellMaster.getColumnIndex()).getStringCellValue());
+                        } else{
                             teacherCurrent.addScore(cellMaster.getStringCellValue(), rowCurrent.getCell(cellMaster.getColumnIndex()).getNumericCellValue(), 5);
                         }
                         teachers.replace(teacherCurrent.getNameSubject(), teacherCurrent);
@@ -168,15 +161,21 @@ class MainFrame extends JFrame {
                 teachersVector.add((Teacher) mapElement.getValue());
             }
 
+            iteratorRow.remove();
+            inputStream.close();
+            workbook.close();
+
             /*
             TODO: Print message "Done reading Excel file."
              */
 
-            PdfGenerator pdfGenerator = new PdfGenerator();
+            PdfGenerator pdfGenerator = new PdfGenerator(teachersVector);
 
             for (int i = 0; i < teachersVector.size(); i++) {
 
-                pdfGenerator.createPdf(teachersVector.get(i), directory);
+                //pdfGenerator.generateRatings(teachersVector.get(i), directory);
+                //pdfGenerator.generateSubEval(teachersVector.get(i),directory);
+                //pdfGenerator.generateTeachEval(teachersVector.get(i),directory);
 
                 /*
                 TODO: Print message "ratings_[subject_name].pdf generated"
@@ -195,9 +194,16 @@ class MainFrame extends JFrame {
 
 class PdfGenerator {
 
-    PdfGenerator() {}
+    private HashMap averages;
 
-    public void createPdf(Teacher teacher, File directory) throws IOException, DocumentException {
+    PdfGenerator(Vector teachersVector) {
+
+        //averages = calculateAverages(teachersVector);
+        //System.out.println("tu som");
+
+    }
+
+    public void generateRatings(Teacher teacher, File directory) throws IOException, DocumentException {
 
         //Vezmem reku hodnotenia ucitela
         HashMap ratings = teacher.getHashMap();
@@ -293,6 +299,86 @@ class PdfGenerator {
             filenumber++;
 
         }
+
+        //Koniec prace s pdfkom
+        document.close();
+        fileOutputStream.close();
+
+    }
+
+    public void generateSubEval(Teacher teacher, File directory) throws IOException, DocumentException {
+
+        String[] subjectEval = teacher.getSubjectEval();
+
+        //Veci na path kde sa to ulozi a nazov suboru
+        String path = directory.getPath()+"\\";
+        String filename = "subjecteval_" + teacher.getNameSubject();
+
+        //Veci na vytvorenie pdfka
+        Document document = new Document();
+        FileOutputStream fileOutputStream = new FileOutputStream(path + filename + ".pdf");
+        PdfWriter.getInstance(document, fileOutputStream);
+        document.open();
+        //Toto som sem musel dat lebo si to myslelo ze dokument je prazdny
+        document.add(new Chunk(""));
+
+        //Nadpisy
+        document.add(new Paragraph("Popíš typickú hodinu a čo sa ti na hodinách páči/nepáči? Ako by sa dali hodiny zlepšiť?"));
+        document.add(new Paragraph("Characterize typical lessons and what you like/dislike about them? What would you suggest to improve the lessons?"));
+        document.add(new Chunk(""));
+
+        //Vytvorim sablonu tabulky
+        PdfPTable table = new PdfPTable(1);
+
+        //Do tabulky nahadzem vsetky hodnotenia na dany predmet
+        for (int i = 0; i < subjectEval.length; i++) {
+
+            table.addCell(subjectEval[i]);
+
+        }
+
+        //Pridam tabulku do suboru
+        document.add(table);
+
+        //Koniec prace s pdfkom
+        document.close();
+        fileOutputStream.close();
+
+    }
+
+    public void generateTeachEval(Teacher teacher, File directory) throws IOException, DocumentException {
+
+        String[] teachEval = teacher.getTeacherEval();
+
+        //Veci na path kde sa to ulozi a nazov suboru
+        String path = directory.getPath()+"\\";
+        String filename = "teachereval_" + teacher.getNameSubject();
+
+        //Veci na vytvorenie pdfka
+        Document document = new Document();
+        FileOutputStream fileOutputStream = new FileOutputStream(path + filename + ".pdf");
+        PdfWriter.getInstance(document, fileOutputStream);
+        document.open();
+        //Toto som sem musel dat lebo si to myslelo ze dokument je prazdny
+        document.add(new Chunk(""));
+
+        //Nadpisy
+        document.add(new Paragraph("Prečo je/nie je učiteľ pre mňa vzorom? Čo sú jeho silné stránky a na čom by mohol popracovať?"));
+        document.add(new Paragraph("What are the reasons that the teacher is/is not positive role model for me? What are the teacher’s strengths and what could he/she improve?"));
+        document.add(new Chunk(""));
+
+        //Vytvorim sablonu tabulky
+        PdfPTable table = new PdfPTable(1);
+
+        //Do tabulky nahadzem vsetky hodnotenia na dany predmet
+        for (int i = 0; i < teachEval.length; i++) {
+
+            table.addCell(teachEval[i]);
+
+        }
+
+        //Pridam tabulku do suboru
+        document.add(table);
 
         //Koniec prace s pdfkom
         document.close();
